@@ -1,0 +1,65 @@
+python eda_analysis.py
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sqlalchemy import create_engine
+
+# Load the cleaned Falcon 9 dataset
+falcon9_df = pd.read_csv("falcon9_launch_data.csv")
+
+# Step 2.1: Basic Summary
+print("Basic Info:")
+print(falcon9_df.info())
+print("\nBasic Statistics:")
+print(falcon9_df.describe())
+
+# Step 2.2: Visualizations
+
+# Launch Count Over Time
+falcon9_df['date'] = pd.to_datetime(falcon9_df['date_utc'])
+falcon9_df['year'] = falcon9_df['date'].dt.year
+
+launch_count_by_year = falcon9_df.groupby('year').size()
+plt.figure(figsize=(10, 6))
+launch_count_by_year.plot(kind='bar', color='skyblue')
+plt.title("Number of Falcon 9 Launches Over Time", fontsize=14)
+plt.xlabel("Year", fontsize=12)
+plt.ylabel("Number of Launches", fontsize=12)
+plt.show()
+
+# Launch Success Rate
+success_counts = falcon9_df['success'].value_counts()
+plt.figure(figsize=(8, 6))
+success_counts.plot(kind='pie', autopct='%1.1f%%', colors=['lightgreen', 'lightcoral'], labels=['Success', 'Failure'])
+plt.title("Falcon 9 Launch Success Rate", fontsize=14)
+plt.ylabel("")  # Remove y-label for cleaner pie chart
+plt.show()
+
+# Payload Mass Distribution
+plt.figure(figsize=(10, 6))
+sns.histplot(falcon9_df['payloads.mass_kg'], bins=20, kde=True, color='purple')
+plt.title("Payload Mass Distribution (kg)", fontsize=14)
+plt.xlabel("Payload Mass (kg)", fontsize=12)
+plt.ylabel("Frequency", fontsize=12)
+plt.show()
+
+# Step 2.3: SQL Queries
+
+# Create an in-memory SQLite database
+engine = create_engine('sqlite://', echo=False)
+falcon9_df.to_sql('falcon9', con=engine, index=False, if_exists='replace')
+
+# Example SQL Query: Average payload mass by year
+query = """
+SELECT year, AVG(payloads_mass_kg) AS avg_payload_mass
+FROM falcon9
+GROUP BY year
+ORDER BY year
+"""
+result = pd.read_sql(query, con=engine)
+print("Average Payload Mass by Year:")
+print(result)
+
+# Close the database connection
+engine.dispose()
+python eda_analysis.py
